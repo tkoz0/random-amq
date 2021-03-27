@@ -2,3 +2,5 @@
 ranked_data/
 # files excluded due to missing data
 ranked_data_dropped/
+
+__pycache__/
