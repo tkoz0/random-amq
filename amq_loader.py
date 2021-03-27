@@ -14,7 +14,17 @@ import re
 re_fname = re.compile(r'amq_(\d{4})s(\d\d)_(ch|\d\d)_(\d{4})-(\d\d)-(\d\d)_'
                        '(east|central|west)\.json')
 
-def read_ranked_data(use_cached_obj=False,store_cached_obj=True):
+# recursively build a list of every file in the input dir
+def all_files(file):
+    if os.path.isfile(file):
+        return [file]
+    elif os.path.isdir(file):
+        files = sorted(os.listdir(file))
+        filelists = [all_files(file+'/'+f) for f in files]
+        return sum(filelists,[])
+    else: return []
+
+def read_ranked_data(dir,use_cached_obj=False,store_cached_obj=True):
     '''
     Returns a list containing ranked objects (type dict) that look like:
     {
@@ -32,19 +42,21 @@ def read_ranked_data(use_cached_obj=False,store_cached_obj=True):
         data = pickle.load(bz2.BZ2File('ranked_data.pickle.bz2','rb'))
         return data
     
-    filelist = os.listdir('ranked_data')
+    filelist = all_files(dir)
     data = []
     
     # process files in the directory
     for file in filelist:
-        year,season,number,y,m,d,region = re_fname.fullmatch(file).groups()
+        i = len(file)-1
+        while i >= 0 and file[i] != '/': i -= 1 # find last /
+        year,season,num,y,m,d,region = re_fname.fullmatch(file[i+1:]).groups()
         obj = dict()
         obj['region'] = region
         obj['year'] = int(year)
         obj['season'] = int(season)
-        obj['number'] = -1 if number == 'ch' else int(number)
+        obj['number'] = -1 if num == 'ch' else int(num)
         obj['date'] = '%s-%s-%s'%(y,m,d)
-        obj['data'] = json.loads(open('ranked_data/'+file,'r').read())
+        obj['data'] = json.loads(open(file,'r').read())
         data.append(obj)
     
     if store_cached_obj:
@@ -52,19 +64,72 @@ def read_ranked_data(use_cached_obj=False,store_cached_obj=True):
     
     return data
 
-def clean_ranked_data():
+# map attributes in reformatted to those in original data
+attr_mapping = \
+{
+    'animeEng': ['animeEng','animeEnglish'],
+    'animeRomaji': ['animeRomaji'],
+    'songName': ['songName'],
+    'artist': ['artist'],
+    'type': ['type'],
+    'link': ['LinkVideo','linkWebm']
+}
+
+def clean_ranked_data(data):
     '''
-    Not implemented yet. Intention is to format the object returned from
-    read_ranked_data() consistently since the scraped JSON files might come from
-    different (versions of a) userscript(s) and structure their data a bit
-    differently. This might be challenging to get right and it might not be
-    feasible to handle every case of inconsistency.
+    Changes the song format to use these attributes:
+    
+    animeEng, animeRomaji, songName, artist, type, correct, link
+    
+    correct = (correct guesses) / (total players)
+    link = video link (webm)
+    others are the same as in the given data
+    
+    The given argument is modified in place
     '''
+    for match in data:
+        for i,song in enumerate(match['data']):
+            cleaned = dict()
+            missing = []
+            for attr in attr_mapping:
+                for attr_old in attr_mapping[attr]:
+                    if attr_old in song:
+                        cleaned[attr] = song[attr_old]
+                        break
+                if attr not in cleaned:
+                    missing.append(attr)
+            # handle 'correct' separately since it involves calculation
+            correct = None
+            total = None
+            if 'correctCount' in song:
+                correct = song['correctCount']
+            if 'activePlayers' in song:
+                total = song['activePlayers']
+            elif 'activePlayerCount' in song:
+                total = song['activePlayerCount']
+            elif 'totalPlayers' in song:
+                total = song['totalPlayers']
+            if (correct is not None) and (total is not None):
+                cleaned['correct'] = correct/total
+            if 'correct' not in cleaned:
+                missing.append('correct')
+            if len(missing) > 0:
+                print('cannot convert %ds%02d %s %s'
+                    %(match['year'],match['season'],
+                    'ch' if match['number'] == -1 else '%02d'%match['number'],
+                    match['region']))
+                print('    cannot get:',missing)
+            else:
+                match['data'][i] = cleaned
 
 if __name__ == '__main__':
-    print('testing')
-    data = read_ranked_data(True)
+    print('reading ranked data')
+    data = read_ranked_data('ranked_data',True)
+    print('done reading')
     print(len(data),'ranked files loaded')
     print(data[0])
+    print('cleaning data')
+    data = clean_ranked_data(data)
+    print('data cleaned')
     print('done')
 
