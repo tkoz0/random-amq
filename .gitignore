@@ -1,2 +1,4 @@
 # raw ranked data
 ranked_data/
+# files excluded due to missing data
+ranked_data_dropped/
