@@ -22,12 +22,11 @@ However, if you download the JSON files from this repo rather than scraping them
 again, I should have those issues taken care of. Another issue is that some
 links to older JSON files are now dead, but you can still get them here.
 
-The `amq_loader.py` script still work in progress, but the intention is to load
-and clean the data. Some of these JSON files, especially older ones, are
-formatted a bit differently and have difficulties that may have to be worked
-with. For example, some older ones have English/Romaji name but not both.
-Additionally, AMQ may have changed the names of some entries in their database
-since these files were created.
+The `amq_loader.py` script has 2 functions: 1 for loading all ranked files from
+a directory and 1 for reformatting the data to make it consistent. Documentation
+for these is in `amq_loader.py`. The `clean_ranked_data` function will work the
+way I intended only if you follow the details below about which files I decided
+to exclude. As of now, I cannot be 100% sure the data is completely ready.
 
 ### data to use
 
