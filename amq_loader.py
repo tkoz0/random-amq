@@ -124,12 +124,13 @@ def clean_ranked_data(data):
 
 if __name__ == '__main__':
     print('reading ranked data')
-    data = read_ranked_data('ranked_data',True)
+    data = read_ranked_data('ranked_data')
     print('done reading')
-    print(len(data),'ranked files loaded')
-    print(data[0])
+    #print(data[0])
     print('cleaning data')
-    data = clean_ranked_data(data)
+    clean_ranked_data(data)
     print('data cleaned')
     print('done')
+    print(len(data),'ranked files loaded')
+    print(sum(len(match['data']) for match in data),'songs loaded')
 
