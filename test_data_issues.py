@@ -74,5 +74,6 @@ def check_file(file):
 
 # show issues in each file, === just makes it easier to find where lines start
 for file in ranked_files:
-    print('===',file,check_file(file))
-
+    issues = check_file(file)
+    if len(issues) > 0:
+        print('===',file,issues)
