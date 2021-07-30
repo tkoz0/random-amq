@@ -1,6 +1,8 @@
 '''
 Reads all the files from:
-ranked_data/amq_<year>s<season>_<day>_<date>_<region>_.json
+<dir>/amq_<year>s<season>_<day>_<date>_<region>_.json
+
+Specify <dir> as single command line argument.
 
 Produces an object containing all the ranked AMQ data stored.
 '''
@@ -10,6 +12,7 @@ import json
 import os
 import pickle
 import re
+import sys
 
 re_fname = re.compile(r'amq_(\d{4})s(\d\d)_(ch|\d\d)_(\d{4})-(\d\d)-(\d\d)_'
                        '(east|central|west)\.json')
@@ -72,7 +75,8 @@ attr_mapping = \
     'songName': ['songName'],
     'artist': ['artist'],
     'type': ['type'],
-    'link': ['LinkVideo','linkWebm']
+    'linkWebm': ['LinkVideo','linkWebm'],
+    'linkMp3': ['LinkMp3']
 }
 
 def clean_ranked_data(data):
@@ -92,6 +96,12 @@ def clean_ranked_data(data):
             cleaned = dict()
             missing = []
             for attr in attr_mapping:
+                if attr == 'linkMp3': # special case to handle when it's missing
+                    if 'LinkMp3' in song:
+                        cleaned[attr] = song['LinkMp3']
+                    else:
+                        cleaned[attr] = None
+                    continue
                 for attr_old in attr_mapping[attr]:
                     if attr_old in song:
                         cleaned[attr] = song[attr_old]
@@ -110,7 +120,8 @@ def clean_ranked_data(data):
             elif 'totalPlayers' in song:
                 total = song['totalPlayers']
             if (correct is not None) and (total is not None):
-                cleaned['correct'] = correct/total
+                cleaned['correct'] = correct
+                cleaned['players'] = total
             if 'correct' not in cleaned:
                 missing.append('correct')
             if len(missing) > 0:
@@ -124,7 +135,7 @@ def clean_ranked_data(data):
 
 if __name__ == '__main__':
     print('reading ranked data')
-    data = read_ranked_data('ranked_data')
+    data = read_ranked_data(sys.argv[1])
     print('done reading')
     #print(data[0])
     print('cleaning data')
