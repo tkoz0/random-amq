@@ -68,6 +68,7 @@ def read_ranked_data(dir,use_cached_obj=False,store_cached_obj=True):
     return data
 
 # map attributes in reformatted to those in original data
+# different scrypt versions may name them differently
 attr_mapping = \
 {
     'animeEng': ['animeEng','animeEnglish'],
@@ -76,7 +77,19 @@ attr_mapping = \
     'artist': ['artist'],
     'type': ['type'],
     'linkWebm': ['LinkVideo','linkWebm'],
-    'linkMp3': ['LinkMp3']
+    'linkMp3': ['LinkMp3'], # may not be present
+    'start': ['startTime','startSample'], # may not be present
+    'length': ['songDuration','videoLength'], # may be null
+    'correct': ['correctCount'],
+    'players': ['activePlayers','activePlayerCount','totalPlayers']
+}
+
+# attributes allowing null value for when it is not found
+# all other missing attributes will cause an error
+attr_nulls = \
+{
+    'linkMp3', # video could be uploaded but mp3 not created yet
+    'start'
 }
 
 def clean_ranked_data(data):
@@ -96,34 +109,15 @@ def clean_ranked_data(data):
             cleaned = dict()
             missing = []
             for attr in attr_mapping:
-                if attr == 'linkMp3': # special case to handle when it's missing
-                    if 'LinkMp3' in song:
-                        cleaned[attr] = song['LinkMp3']
-                    else:
-                        cleaned[attr] = None
-                    continue
                 for attr_old in attr_mapping[attr]:
                     if attr_old in song:
                         cleaned[attr] = song[attr_old]
                         break
-                if attr not in cleaned:
-                    missing.append(attr)
-            # handle 'correct' separately since it involves calculation
-            correct = None
-            total = None
-            if 'correctCount' in song:
-                correct = song['correctCount']
-            if 'activePlayers' in song:
-                total = song['activePlayers']
-            elif 'activePlayerCount' in song:
-                total = song['activePlayerCount']
-            elif 'totalPlayers' in song:
-                total = song['totalPlayers']
-            if (correct is not None) and (total is not None):
-                cleaned['correct'] = correct
-                cleaned['players'] = total
-            if 'correct' not in cleaned:
-                missing.append('correct')
+                if attr not in cleaned: # cannot find
+                    if attr in attr_nulls:
+                        cleaned[attr] = None
+                    else:
+                        missing.append(attr)
             if len(missing) > 0:
                 print('cannot convert %ds%02d %s %s'
                     %(match['year'],match['season'],
