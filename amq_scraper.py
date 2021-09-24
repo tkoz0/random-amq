@@ -29,6 +29,7 @@ import sys
 
 if len(sys.argv) != 3:
     print('usage: amq_scraper.py <sheet csv> <output dir>')
+    quit()
 
 # sheet data to process
 sheet = sys.argv[1]
