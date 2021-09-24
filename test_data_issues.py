@@ -10,9 +10,12 @@ this program should show no issues for most and fewer than 75 songs for some.
 
 import json
 import os
+import re
 import sys
 
 in_dir = os.path.normpath(sys.argv[1])
+re_fname = re.compile(r'amq_(\d{4})s(\d\d)_(ch|\d\d)_(\d{4})-(\d\d)-(\d\d)_'
+                       '(east|central|west)\.json')
 
 # recursively build a list of every file in the input dir
 def all_files(file):
@@ -27,42 +30,35 @@ def all_files(file):
 ranked_files = all_files(in_dir)
 print('input:',len(ranked_files),'files')
 
-# ignore these, they were used for testing something dumb
-song_keys = set(['animeEng','animeRomaji','songName','artist','type','correctCount','startTime','songDuration','songNumber','activePlayerCount','LinkVideo','LinkMp3'])
-req_keys = set(['animeEng','animeRomaji','songName','artist','type','correctCount','activePlayers','LinkVideo','LinkMp3'])
-
 # searches for issues and returns list of strings describing them
 def check_file(file):
     issues = []
     data = json.loads(open(file,'r').read())
-    if len(data) != 75:
+    year,season,num,y,m,d,region = re_fname.fullmatch(os.path.basename(file)).groups()
+    # for 2021s08 and later, check for 85 songs
+    if int(year) > 2021 or (int(year) == 2021 and int(season) >= 8):
+        if len(data) != 85:
+            issues.append('%d != 85 songs'%len(data))
+    elif len(data) != 75:
         issues.append('%d != 75 songs'%len(data))
     attr_missing = dict() # map attr missing to song index
     # go backwards so earliest occurrence overwrites in attr_missing dictionary
     for i,song in ((j,data[j]) for j in range(len(data)-1,-1,-1)):
         if ('animeEng' not in song) and ('animeEnglish' not in song):
-            #issues.append('(index %d) no animeEng or animeEnglish'%i)
             attr_missing['animeEng/animeEnglish'] = i
         if 'animeRomaji' not in song:
-            #issues.append('(index %d) no animeRomaji'%i)
             attr_missing['animeRomaji'] = i
         if 'songName' not in song:
-            #issues.append('(index %d) no songName'%i)
             attr_missing['songName'] = i
         if 'artist' not in song:
-            #issues.append('(index %d) no artist'%i)
             attr_missing['artist'] = i
         if 'type' not in song:
-            #issues.append('(index %d) no type'%i)
             attr_missing['type'] = i
         if 'correctCount' not in song:
-            #issues.append('(index %d) no correctCount'%i)
             attr_missing['correctCount'] = i
         if ('activePlayers' not in song) and ('activePlayerCount' not in song) and ('totalPlayers' not in song):
-            #issues.append('(index %d) no activePlayers or activePlayerCount or totalPlayers'%i)
             attr_missing['activePlayers/activePlayerCount/totalPlayers'] = i
         if ('LinkVideo' not in song) and ('linkWebm' not in song):
-            #issues.append('(index %d) no LinkVideo or linkWebm'%i)
             attr_missing['LinkVideo/linkWebm'] = i
         # should always have video/webm link which is more important than mp3
         #if 'LinkMp3' not in song:
