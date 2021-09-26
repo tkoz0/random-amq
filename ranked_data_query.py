@@ -150,7 +150,7 @@ def queryRankedData(data,parameters,debug=False):
 if __name__ == '__main__':
     sys.stderr.write('loading data...\n')
     data = amq_loader.read_ranked_data(None,True)
-    amq_loader.clean_ranked_data(data)
+    #amq_loader.clean_ranked_data(data)
     sys.stderr.write('done loading\n')
     sys.stderr.write('running query...\n')
     query = queryRankedData(data,sys.argv[1:])
