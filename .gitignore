@@ -2,5 +2,7 @@
 ranked_data/
 # files excluded due to missing data
 ranked_data_dropped/
-
+# pycache
 __pycache__/
+# the pickle
+ranked_data.pickle.bz2
