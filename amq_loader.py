@@ -27,46 +27,6 @@ def all_files(file):
         return sum(filelists,[])
     else: return []
 
-def read_ranked_data(dir,use_cached_obj=False,store_cached_obj=True):
-    '''
-    Returns a list containing ranked objects (type dict) that look like:
-    {
-        "region": "western"
-        "year": 2020
-        "season": 11
-        "number": 20 # -1 for championship to keep the type consistent
-        "date": "2020-11-21"
-        "data": [object read from the JSON file on disk]
-    }
-    May store/read the data from "ranked_data.pickle" to speed things up
-    depending on the options provided
-    '''
-    if use_cached_obj and os.path.isfile('ranked_data.pickle.bz2'):
-        data = pickle.load(bz2.BZ2File('ranked_data.pickle.bz2','rb'))
-        return data
-    
-    filelist = all_files(dir)
-    data = []
-    
-    # process files in the directory
-    for file in filelist:
-        i = len(file)-1
-        while i >= 0 and file[i] != '/': i -= 1 # find last /
-        year,season,num,y,m,d,region = re_fname.fullmatch(file[i+1:]).groups()
-        obj = dict()
-        obj['region'] = region
-        obj['year'] = int(year)
-        obj['season'] = int(season)
-        obj['number'] = -1 if num == 'ch' else int(num)
-        obj['date'] = '%s-%s-%s'%(y,m,d)
-        obj['data'] = json.loads(open(file,'r').read())
-        data.append(obj)
-    
-    if store_cached_obj:
-        pickle.dump(data,bz2.BZ2File('ranked_data.pickle.bz2','wb'))
-    
-    return data
-
 # map attributes in reformatted to those in original data
 # different scrypt versions may name them differently
 attr_mapping = \
@@ -127,15 +87,53 @@ def clean_ranked_data(data):
             else:
                 match['data'][i] = cleaned
 
+def read_ranked_data(dir,use_cached_obj=False,store_cached_obj=True):
+    '''
+    Returns a list containing ranked objects (type dict) that look like:
+    {
+        "region": "western"
+        "year": 2020
+        "season": 11
+        "number": 20 # -1 for championship to keep the type consistent
+        "date": "2020-11-21"
+        "data": [object read from the JSON file on disk]
+    }
+    May store/read the data from "ranked_data.pickle" to speed things up
+    depending on the options provided
+    '''
+    if use_cached_obj and os.path.isfile('ranked_data.pickle.bz2'):
+        data = pickle.load(bz2.BZ2File('ranked_data.pickle.bz2','rb'))
+        return data
+    
+    filelist = all_files(dir)
+    data = []
+    
+    # process files in the directory
+    for file in filelist:
+        i = len(file)-1
+        while i >= 0 and file[i] != '/': i -= 1 # find last /
+        year,season,num,y,m,d,region = re_fname.fullmatch(file[i+1:]).groups()
+        obj = dict()
+        obj['region'] = region
+        obj['year'] = int(year)
+        obj['season'] = int(season)
+        obj['number'] = -1 if num == 'ch' else int(num)
+        obj['date'] = '%s-%s-%s'%(y,m,d)
+        obj['data'] = json.loads(open(file,'r').read())
+        data.append(obj)
+    
+    # clean data as well to finish processing
+    clean_ranked_data(data)
+
+    if store_cached_obj:
+        pickle.dump(data,bz2.BZ2File('ranked_data.pickle.bz2','wb'))
+    
+    return data
+
 if __name__ == '__main__':
     print('reading ranked data')
     data = read_ranked_data(sys.argv[1])
     print('done reading')
-    #print(data[0])
-    print('cleaning data')
-    clean_ranked_data(data)
-    print('data cleaned')
-    print('done')
     print(len(data),'ranked files loaded')
     print(sum(len(match['data']) for match in data),'songs loaded')
 
