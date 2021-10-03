@@ -63,6 +63,8 @@ def insert_link(db,link):
 
 # inserts new info for a link, assumes link is already in database
 def insert_info(db,link,attr,value):
+    if attr == 'type' and value == 'Insert Song':
+        value = 'Insert'
     if attr == 'latestDate':
         current = db[link][attr]
         if value and (current is None or value > current):
@@ -94,7 +96,7 @@ def process_expand_library(db,data,date):
                 insert_info(db,link,'artist',artist)
                 insert_info(db,link,'latestDate',date)
 
-# attribute mapping for simplifying song list code
+# attribute mapping for song list only files
 attr_map = \
 {
     'animeEng': ['animeEng','animeEnglish'],
@@ -128,15 +130,26 @@ def process_songs_lite(db,data,date):
                 insert_info(db,link,attr,extracted[attr])
             insert_info(db,link,'latestDate',date)
 
+# attribute mapping for some of the full data
+attr_map_full = \
+{
+    'annId': 'annId',
+    'songName': 'name',
+    'artist': 'artist',
+    'type': 'type',
+    'length': 'videoLength'
+}
+
 # song list with player data
 def process_songs_full(db,data,date):
     for song_obj in data:
         extracted = dict()
-        for attr in attr_map:
-            for source_attr in attr_map[attr]:
-                if source_attr in song_obj:
-                    extracted[attr] = song_obj[source_attr]
-                    break
+        extracted['animeEng'] = song_obj['anime']['english']
+        extracted['animeRomaji'] = song_obj['anime']['romaji']
+        for attr in attr_map_full:
+            source = attr_map_full[attr]
+            if source in song_obj:
+                extracted[attr] = song_obj[source]
         links = sum([list(v.values()) for v in song_obj['urls'].values()],[])
         for link in links:
             if not link: continue
@@ -174,13 +187,17 @@ def process_file(db,f):
     else: # song list only
         process_songs_lite(db,data,date)
 
+errors = 0
 for f in inputs:
     try:
         sys.stderr.write(f'Loading file: {f}\n')
         process_file(database,f)
     except Exception as e:
+        errors += 1
         sys.stderr.write(f'Error processing: {f}\n')
         sys.stderr.write(f'{type(e).__name__}: {e}\n')
+
+sys.stderr.write(f'{errors} error(s)')
 
 # output compact json to STDOUT
 print(json.dumps(database,separators=(',',':')))
