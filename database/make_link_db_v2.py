@@ -39,7 +39,7 @@ the date of that data will be null.
 
 To use this script, run the command:
 
-python3 make_link_db_v2.py [files and directories ...]
+python3 make_link_db_v2.py [files and directories ...] > output_file
 
 All directories will be processed recursively and data will be collected from
 every input file found.
