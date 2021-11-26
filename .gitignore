@@ -6,3 +6,5 @@ ranked_data_dropped/
 __pycache__/
 # the pickle
 ranked_data.pickle.bz2
+# database input
+database/all_data/
