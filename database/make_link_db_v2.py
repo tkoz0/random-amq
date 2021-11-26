@@ -16,7 +16,7 @@ output is a dictionary mapping the mp3/webm link to an information object:
     "idKitsu": int,
     "idAnilist": int,
     # Anime info
-    "animeType": str, # TV, Movie, OVA, ONA, Special
+    "animeType": str, # "TV", "movie", "OVA", "ONA", "special"
     "animeScoreAnn": float,
     "animeSeason": str, # Formatted like "Fall 2021"
     "animeTags": List[str],
@@ -114,24 +114,24 @@ ATTR_MAPPING_SONGS_LITE : Dict[str,str] = \
 # The source attributes with a . require double dictionary access
 ATTR_MAPPING_SONGS_FULL: Dict[str,str] = \
 {
-    'name': 'songName',
-    'artist': 'songArtist',
-    'anime.english': 'animeEnglish',
-    'anime.romaji': 'animeRomaji',
-    'annId': 'idAnn',
-    'type': 'songType',
-    'siteIds.annId': 'idAnn',
-    'siteIds.malId': 'idMal',
-    'siteIds.kitsuId': 'idKitsu',
+    'name'             : 'songName',
+    'artist'           : 'songArtist',
+    'anime.english'    : 'animeEnglish',
+    'anime.romaji'     : 'animeRomaji',
+    'annId'            : 'idAnn',
+    'type'             : 'songType',
+    'siteIds.annId'    : 'idAnn',
+    'siteIds.malId'    : 'idMal',
+    'siteIds.kitsuId'  : 'idKitsu',
     'siteIds.aniListId': 'idAnilist',
-    'difficulty': 'difficulty',
-    'animeType': 'animeType',
-    'animeScore': 'animeScoreAnn',
-    'vintage': 'animeSeason',
-    'tags': 'animeTags',
-    'genre': 'animeGenres',
-    'altAnswers': 'altAnswers',
-    'videoLength': 'songLength'
+    'difficulty'       : 'difficulty',
+    'animeType'        : 'animeType',
+    'animeScore'       : 'animeScoreAnn',
+    'vintage'          : 'animeSeason',
+    'tags'             : 'animeTags',
+    'genre'            : 'animeGenres',
+    'altAnswers'       : 'altAnswers',
+    'videoLength'      : 'songLength'
 }
 
 # Source attributes for links in song list lite files
@@ -155,11 +155,11 @@ def insert_info(db: Dict[str,dict], links: List[str],
     for link in links: # ensure default null values are in the database
         if link not in db:
             db[link] = dict()
-            for attr in OUTPUT_ATTR:
-                db[link][attr] = None
+            for attr_ in OUTPUT_ATTR:
+                db[link][attr_] = None
             db[link]['dates'] = dict()
-            for attr in OUTPUT_ATTR: # null date for each attribute
-                db[link]['dates'][attr] = None
+            for attr_ in OUTPUT_ATTR: # null date for each attribute
+                db[link]['dates'][attr_] = None
     for link in links:
         old_date = db[link]['dates'][attr]
         if old_date is None: # for comparing dates as str
