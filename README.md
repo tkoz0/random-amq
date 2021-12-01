@@ -1,6 +1,8 @@
 # random-amq
 a place for me to mess around with amq stuff (animemusicquiz.com)
 
+this file needs to be updated at some point but laziness...
+
 ## ranked data
 
 Spreadsheet with the ranked data JSON files:
