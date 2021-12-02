@@ -72,6 +72,23 @@ DATE_FORMATS : List[Pattern[str]] = \
     re.compile(r'(\d{4})(\d\d)(\d\d)')
 ]
 
+# Ranges for valid dates (output a warning for dates outside this range)
+DATE_YMIN = 2017
+DATE_YMAX = 2030
+DATE_MMIN = 1
+DATE_MMAX = 12
+DATE_DMIN = 1
+DATE_DMAX = 31
+
+def check_date(date: str) -> bool:
+    '''
+    Checks the range of the given date using the above variables. The date
+    format used is "YYYY-MM-DD".
+    '''
+    y,m,d = map(int,date.split('-'))
+    return DATE_YMIN <= y <= DATE_YMAX and DATE_MMIN <= m <= DATE_MMAX \
+        and DATE_DMIN <= d <= DATE_DMAX
+
 # Attributes in the output data (except the special attribute "dates")
 OUTPUT_ATTR : List[str] = \
 [
@@ -95,6 +112,18 @@ OUTPUT_ATTR : List[str] = \
     'songLength',
     'difficulty'
 ]
+
+# Destination attributes to the pattern for identifying the value
+ATTR_MAPPING_APPROVALS : Dict[str,Pattern[str]] = \
+{
+    "animeEnglish": re.compile(r'\*\*Anime:\*\* (.+)'),
+    "songName"    : re.compile(r'\*\*Song:\*\* (.+)'),
+    "songArtist"  : re.compile(r'\*\*Artist:\*\* (.+)'),
+    "songType"    : re.compile(r'\*\*Song Type:\*\* (.+)')
+}
+
+APPROVALS_LINK_RE : Pattern[str] = re.compile(r'\*\*Link:\*\* <(.+)>')
+VIDEO_LINK_RE     : Pattern[str] = re.compile(r'https?://.+/.+')
 
 # Source to output mapping for attributes in song list lite files
 ATTR_MAPPING_SONGS_LITE : Dict[str,str] = \
@@ -168,6 +197,45 @@ def insert_info(db: Dict[str,dict], links: List[str],
             (date is not None and date > old_date):
             db[link][attr] = value
             db[link]['dates'][attr] = date
+
+def add_approvals(db: Dict[str,dict], data: dict):
+    '''
+    Add link info from dumps of the #approvals channel on the discord. Dates are
+    determined from the message dates in the dump rather than the filename.
+
+    (Most) messages from the Komugi bot will have a neat format listing the
+    english anime name, song name, song artist, song type, and video link.
+    '''
+    for i,message in enumerate(data['messages']):
+        date = message['timestamp'][:10]
+        if not check_date(date):
+            sys.stderr.write(f'    Message {i} has date {date}, skipping\n')
+            continue
+        text = message['content'].splitlines()
+        if len(text) == 0: # get from embed
+            if len(message['embeds']) == 0:
+                sys.stderr.write(f'    Failed to get text from message {i}\n')
+                continue
+            text = message['embeds'][0]['description'].splitlines()
+        link : Union[None,str] = None
+        for line in text: # find link
+            match = APPROVALS_LINK_RE.fullmatch(line)
+            if match:
+                link = match.group(1)
+                break
+        if link is None:
+            sys.stderr.write(f'    Failed to get link for message {i}\n')
+            continue
+        if not VIDEO_LINK_RE.fullmatch(link):
+            sys.stderr.write(f'    Invalid link in message {i}: {link}\n')
+            continue
+        for dest in ATTR_MAPPING_APPROVALS:
+            pattern = ATTR_MAPPING_APPROVALS[dest]
+            for line in text: # find data
+                match = pattern.fullmatch(line)
+                if match:
+                    insert_info(db,[link],dest,match.group(1),date)
+                    break
 
 def add_songs_lite(db: Dict[str,dict], data: List[Dict[str,Any]],
                     date: Union[str,None]):
@@ -269,14 +337,6 @@ def add_exp_lib(db: Dict[str,dict], data: List[Any], date: Union[str,None]):
             insert_info(db,links,'songType',type_,date)
             insert_info(db,links,'songArtist',song['artist'],date)
 
-# Ranges for valid dates (output a warning for dates outside this range)
-DATE_YMIN = 2017
-DATE_YMAX = 2030
-DATE_MMIN = 1
-DATE_MMAX = 12
-DATE_DMIN = 1
-DATE_DMAX = 31
-
 # Set to False for debugging so the script fails completely on error
 HANDLE_EXCEPTIONS = True
 
@@ -284,7 +344,20 @@ def add_from_file(db: Dict[str,Any], file: str):
     sys.stderr.write(f'Processing file: {file}\n')
 
     data = json.loads(open(file,'r').read())
-    if type(data) != list or len(data) == 0:
+
+    if type(data) == dict: # expect discord channel export
+        try:
+            add_approvals(db,data)
+        except Exception as e:
+            if HANDLE_EXCEPTIONS:
+                sys.stderr.write(f'    Failed parsing as approvals channel'
+                                    'dump\n')
+                sys.stderr.write(f'    {type(e)}: {str(e)}\n')
+            else:
+                raise e
+        return
+
+    elif type(data) != list or len(data) == 0:
         sys.stderr.write(f'    Not a JSON list\n')
         return
 
@@ -294,12 +367,11 @@ def add_from_file(db: Dict[str,Any], file: str):
         match = fmt.search(file)
         if not match:
             continue
-        y,m,d = map(int,match.groups())
-        if  (not (DATE_YMIN <= y <= DATE_YMAX)) or \
-            (not (DATE_MMIN <= m <= DATE_MMAX)) or \
-            (not (DATE_DMIN <= d <= DATE_DMAX)):
-            sys.stderr.write(f'    Date {y:04}-{m:02}-{d:02} may be invalid\n')
-        date = f'{y:04}-{m:02}-{d:02}'
+        date_ = '-'.join(match.groups())
+        if not check_date(date_):
+            sys.stderr.write(f'    Date {date_} out of range, not using\n')
+            continue
+        date = date_
         break
 
     # No date
