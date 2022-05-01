@@ -52,7 +52,7 @@ re_url_pastebin = re.compile(r'https?://(www\.)?pastebin.com/\w+')
 
 # github gist url with the ID at the end
 # getting the raw url requires finding it in the html
-re_url_gistgithub = re.compile(r'https?://gist.github.com/\w+')
+re_url_gistgithub = re.compile(r'https?:\/\/gist\.github\.com\/(\w+\/)?\w+')
 
 def get_year_and_season(sheet):
     ''' returns tuple of 2 integers '''
