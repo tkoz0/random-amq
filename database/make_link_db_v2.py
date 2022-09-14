@@ -225,6 +225,7 @@ def add_approvals(db: Dict[str,dict], data: dict):
                 break
         if link is None:
             sys.stderr.write(f'    Failed to get link for message {i}\n')
+            sys.stderr.write(f'    TEXT:\n'+'\n'.join(' '*8+line for line in text)+'\n')
             continue
         if not VIDEO_LINK_RE.fullmatch(link):
             sys.stderr.write(f'    Invalid link in message {i}: {link}\n')
