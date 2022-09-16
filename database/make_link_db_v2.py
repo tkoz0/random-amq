@@ -181,6 +181,12 @@ def insert_info(db: Dict[str,dict], links: List[str],
     already exists, it is replaced only if a later date is provided (or any date
     if no date is associated with the existing data).)
     '''
+    # remove blanks
+    links = [link for link in links if link != None and link != '']
+    # basic url format check
+    if any(not link.startswith('http') for link in links):
+        sys.stderr.write(f'    WARN: weird url found\n')
+        sys.stderr.write(f'    links = {links}\n')
     for link in links: # ensure default null values are in the database
         if link not in db:
             db[link] = dict()
